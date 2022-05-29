@@ -42,11 +42,12 @@ struct LidarEdgeFactor
         Eigen::Matrix<T, 3, 1> t_l_b{T(tlb.x()), T(tlb.y()), T(tlb.z())};
 
         Eigen::Matrix<T, 3, 1> lp;
-        Eigen::Matrix<T, 3, 1> p_w;
-        // 将当前帧的点转换到base_link坐标系
-        p_w = q_l_b.inverse() * (cp - t_l_b);
-        // 将点变换到世界坐标系
-        lp = q_last_curr * p_w + t_last_curr;
+        //Eigen::Matrix<T, 3, 1> p_w;
+        //// 将当前帧的点转换到base_link坐标系
+        //p_w = q_l_b.inverse() * (cp - t_l_b);
+        //// 将点变换到世界坐标系
+        //lp = q_last_curr * p_w + t_last_curr;
+        lp = q_last_curr * cp + t_last_curr;    // 修复bug，官方commit: a9b58a03199d99c6bfebb0d788bdf706c2efdb97
 
         Eigen::Matrix<T, 3, 1> nu = (lp - lpa).cross(lp - lpb);
         Eigen::Matrix<T, 3, 1> de = lpa - lpb;

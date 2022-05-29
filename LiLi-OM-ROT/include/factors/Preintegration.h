@@ -135,7 +135,7 @@ public:
                     -0.25 * result_delta_q.toRotationMatrix() * R_a_1_x * (Matrix3d::Identity() - R_w_x * dt) * dt * dt;
             F.block<3, 3>(0, 6) = MatrixXd::Identity(3, 3) * dt;
             F.block<3, 3>(0, 9) = -0.25*(delta_q.toRotationMatrix() + result_delta_q.toRotationMatrix()) * dt * dt;
-            F.block<3, 3>(0, 12) = -0.1667*result_delta_q.toRotationMatrix() * R_a_1_x * dt * dt * -dt;
+            F.block<3, 3>(0, 12) = -0.1667*result_delta_q.toRotationMatrix() * R_a_1_x * dt * dt * -dt; // 这里应该是-0.25
             F.block<3, 3>(3, 3) = Matrix3d::Identity() - R_w_x * dt;
             F.block<3, 3>(3, 12) = -MatrixXd::Identity(3, 3) * dt;
             F.block<3, 3>(6, 3) = -0.5*delta_q.toRotationMatrix() * R_a_0_x * dt +
@@ -149,9 +149,9 @@ public:
             // NOTE: V = Fd * G_c
             // FIXME: verify if it is right, the 0.25 part
             MatrixXd V = MatrixXd::Zero(15, 18);
-            V.block<3, 3>(0, 0) = 0.5 * delta_q.toRotationMatrix() * dt * dt;
+            V.block<3, 3>(0, 0) = 0.5 * delta_q.toRotationMatrix() * dt * dt;   // vins-mono 0.25
             V.block<3, 3>(0, 3) = -0.25*result_delta_q.toRotationMatrix() * R_a_1_x * dt * dt * 0.5 * dt;
-            V.block<3, 3>(0, 6) = 0.5 * result_delta_q.toRotationMatrix() * dt * dt;
+            V.block<3, 3>(0, 6) = 0.5 * result_delta_q.toRotationMatrix() * dt * dt;    // vins-mono 0.25
             V.block<3, 3>(0, 9) = V.block<3, 3>(0, 3);
             V.block<3, 3>(3, 3) = 0.5*MatrixXd::Identity(3, 3) * dt;
             V.block<3, 3>(3, 9) = 0.5*MatrixXd::Identity(3, 3) * dt;
