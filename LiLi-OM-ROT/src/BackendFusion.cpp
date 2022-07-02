@@ -157,18 +157,18 @@ private:
     int slide_window_width;
 
     //index of keyframe
-    vector<int> keyframe_idx;           // abs_pose变量的索引
+    vector<int> keyframe_idx;           // abs_pose变量的索引，即keyframe_idx[0] 表示第0个关键帧在abs_poses[]的索引， abs_poses.at(keyframe_idx[0])就是第0个关键帧的pose
     vector<int> keyframe_id_in_frame;   // 关键帧在所有lidar帧的idx
 
     vector<vector<double>> abs_poses;
 
-    int num_kf_sliding;
+    int num_kf_sliding; // 这个没用的变量
 
     vector<sensor_msgs::ImuConstPtr> imu_buf;
     nav_msgs::Odometry::ConstPtr odom_cur;
     vector<nav_msgs::Odometry::ConstPtr> each_odom_buf;     // 前端给出的当前帧到上一帧的相对位姿变换
     double time_last_imu;
-    double cur_time_imu;
+    double cur_time_imu;    ///< 已经处理过的imu的时间戳
     bool first_imu;
     vector<Preintegration*> pre_integrations;
     Eigen::Vector3d acc_0, gyr_0, g, tmp_acc_0, tmp_gyr_0;
@@ -193,7 +193,7 @@ private:
 
     double ql2b_w, ql2b_x, ql2b_y, ql2b_z, tl2b_x, tl2b_y, tl2b_z;
 
-    int idx_imu;
+    int idx_imu;    ///< 处理过的imu的索引
 
     //first sliding window optimazition
     bool first_opt;
@@ -208,7 +208,7 @@ private:
 
     bool marg = true;
 
-    vector<int> imu_idx_in_kf;
+    vector<int> imu_idx_in_kf;  ///< 记录 时间戳 < 当前最新关键帧的IMU索引
 
     double time_last_loop = 0;
 
@@ -1620,7 +1620,7 @@ public:
     }
 
     void saveKeyFramesAndFactors() {
-        // 保存当前位姿
+        // 保存当前位姿(这里主要是先占一个坑，后面再更新值)
         abs_poses.push_back(abs_pose);
         // 最新关键帧在所有lidar帧的idx
         keyframe_id_in_frame.push_back(each_odom_buf.size()-1);
@@ -1637,6 +1637,7 @@ public:
 
         // record index of kayframe on imu preintegration poses
         // 记录当前最新关键帧索引 （与imu 预积分位姿对应的）
+        // keyframe_idx[0] 表示第0个关键帧在abs_poses[]的索引， abs_poses.at(keyframe_idx[0])就是第0个关键帧的pose
         keyframe_idx.push_back(abs_poses.size()-1);
         /***************************************
         ** qpc Debug:
@@ -1650,6 +1651,8 @@ public:
         ** ...
         ** 结论： keyframe_idx[]第0个元素对应
         **       abs_poses[]第1个元素，相当于滞后1个
+        ** 因为在初始化时， abs_poses就填了一个空的坑位，
+        ** 第一次进入到这个函数，运行到这里的时候， abs_poses.size() == 2
         ****************************************/
 
         double dx = 0, dy = 0, dz = 0, rx = 0, ry = 0, rz = 0;
@@ -1780,6 +1783,7 @@ public:
         //optimize sliding window
         num_kf_sliding++;
         // 滑窗关键帧数量>1 或者 还没进行第一次 滑窗优化
+        // 一定会进去的
         if(num_kf_sliding >= 1 || !first_opt) {
             optimizeSlidingWindowWithLandMark();
             num_kf_sliding = 0;
@@ -1787,13 +1791,15 @@ public:
 
         // 关键帧数量 == 滑窗width , 只会遇到一次
         if (pose_cloud_frame->points.size() == slide_window_width) {
+            // 直接保存第0个关键帧就好了
             // 取最旧的关键帧，保存到pose_each_frame,pose_info_each_frame
             pose_each_frame->push_back(pose_cloud_frame->points[0]);
             pose_info_each_frame->push_back(pose_info_cloud_frame->points[0]);
         } else if(pose_cloud_frame->points.size() > slide_window_width) {
             // 如果关键帧数量 > 滑窗width
+            // 否则，需要优化滑窗最旧帧的前一关键帧到滑窗最旧帧之间的普通帧位姿
 
-            // ii: 到滑窗最旧帧的imu索引
+            // ii: 到滑窗最旧帧的前一关键帧的imu索引
             int ii = imu_idx_in_kf[imu_idx_in_kf.size() - slide_window_width - 1];
             double dx = 0, dy = 0, dz = 0, rx = 0, ry = 0, rz = 0;
 
@@ -1810,6 +1816,7 @@ public:
             ** 8 8 7
             ** 9 9 8
             ** 10 10 9
+            ** abs_poses[1] 与 Ps[1] ...    <===> 对应于 pose_cloud_frame[0]
             ****************************************/
 
             //Ps.size() - slide_window_width : 滑窗最旧关键帧的前一关键帧
@@ -1830,6 +1837,7 @@ public:
             ** 4 2
             ** 5 3 ...
             ** Ps[]的第2个元素
+            ** 因为，slide_window_width==3，所以第3次才进到这里
             ****************************************/
 
             // i表示普通激光帧的序号
@@ -2056,7 +2064,7 @@ public:
             vector<double*> paraBetweenEachFrame;
             // keyframe_id_in_frame[pose_cloud_frame->points.size() - slide_window_width - 1]: 滑窗最旧关键帧的前一关键帧对应id
             // keyframe_id_in_frame[pose_cloud_frame->points.size() - slide_window_width] : 滑窗最旧关键帧对应id
-            // numPara: 得到期间的普通帧数量
+            // numPara: 得到期间的可以构造的约束数量
             int numPara = keyframe_id_in_frame[pose_cloud_frame->points.size() - slide_window_width] - keyframe_id_in_frame[pose_cloud_frame->points.size() - slide_window_width - 1];
             double dQuat[numPara][4];
             double dTrans[numPara][3];
