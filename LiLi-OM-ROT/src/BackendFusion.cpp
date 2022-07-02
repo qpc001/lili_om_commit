@@ -34,6 +34,7 @@ private:
     ros::Publisher pub_map;
     ros::Publisher pub_odom;
     ros::Publisher pub_poses;
+    ros::Publisher pub_poses_full;
     ros::Publisher pub_edge;
     ros::Publisher pub_surf;
     ros::Publisher pub_full;
@@ -246,6 +247,7 @@ public:
         pub_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 2);
         pub_odom = nh.advertise<nav_msgs::Odometry>("/odom_mapped", 2);
         pub_poses = nh.advertise<sensor_msgs::PointCloud2>("/trajectory", 2);
+        pub_poses_full = nh.advertise<sensor_msgs::PointCloud2>("/trajectory_full", 200);
         pub_edge = nh.advertise<sensor_msgs::PointCloud2>("/map_corner_less_sharp", 2);
         pub_surf = nh.advertise<sensor_msgs::PointCloud2>("/map_surf_less_flat", 2);
         pub_full = nh.advertise<sensor_msgs::PointCloud2>("/raw_scan", 2);
@@ -1820,9 +1822,9 @@ public:
             ****************************************/
 
             //Ps.size() - slide_window_width : 滑窗最旧关键帧的前一关键帧
-            Eigen::Vector3d Ptmp = Ps[Ps.size() - slide_window_width];
-            Eigen::Vector3d Vtmp = Vs[Ps.size() - slide_window_width];
-            Eigen::Matrix3d Rtmp = Rs[Ps.size() - slide_window_width];
+            Eigen::Vector3d Ptmp = Ps[Ps.size() - slide_window_width -1];
+            Eigen::Vector3d Vtmp = Vs[Ps.size() - slide_window_width -1];
+            Eigen::Matrix3d Rtmp = Rs[Ps.size() - slide_window_width -1];
             Eigen::Vector3d Batmp = Eigen::Vector3d::Zero();
             Eigen::Vector3d Bgtmp = Eigen::Vector3d::Zero();
             /***************************************
@@ -2205,6 +2207,24 @@ public:
         isam->update(glocal_pose_graph, glocal_init_estimate);
         isam->update();
 
+        {
+            auto estimated_result = isam->calculateEstimate();
+            //ROS_WARN("GTsam size: %d", estimated_result.size());
+            pcl::PointCloud<pcl::PointXYZ> cloud_poses;
+            for(int i=0; i< estimated_result.size() ;++i){
+                pcl::PointXYZ p;
+                p.x = estimated_result.at<gtsam::Pose3>(i).translation().x();
+                p.y = estimated_result.at<gtsam::Pose3>(i).translation().y();
+                p.z = estimated_result.at<gtsam::Pose3>(i).translation().z();
+                cloud_poses.push_back(p);
+                //ROS_INFO("[%d] (%f %f %f)", i, p.x, p.y, p.z);
+            }
+            sensor_msgs::PointCloud2 cloud_poses_ros;
+            pcl::toROSMsg(cloud_poses, cloud_poses_ros);
+            cloud_poses_ros.header.frame_id = frame_id;
+            pub_poses_full.publish(cloud_poses_ros);
+        }
+
         glocal_pose_graph.resize(0);
         glocal_init_estimate.clear();
 
@@ -2389,10 +2409,11 @@ public:
         sensor_msgs::PointCloud2 msgs;
 
         if (pub_poses.getNumSubscribers() && pose_info_cloud_frame->points.size() >= slide_window_width) {
-            pcl::toROSMsg(*pose_each_frame, msgs);
+            pcl::toROSMsg(*pose_cloud_frame, msgs);
             msgs.header.stamp = ros::Time().fromSec(time_new_odom);
             msgs.header.frame_id = frame_id;
             pub_poses.publish(msgs);
+            //ROS_WARN("kf size: %d", pose_info_cloud_frame->points.size());
         }
 
 
