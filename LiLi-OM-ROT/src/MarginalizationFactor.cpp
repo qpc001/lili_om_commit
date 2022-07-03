@@ -279,6 +279,8 @@ void MarginalizationInfo::Marginalize() {
     A = Arr - Arm * Amm_inv * Amr;
     b = brr - Arm * Amm_inv * bmm;
 
+    // 从边缘化后得到的A和b中恢复出线性化的雅克比和残差
+    //这步操作的目的为：恢复出雅克比和残差之后，便可以重新构造成factor和其他factor一起通过ceres进行非线性优化迭代
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
     Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
     Eigen::VectorXd
