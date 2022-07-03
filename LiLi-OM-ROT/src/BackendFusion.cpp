@@ -1275,6 +1275,11 @@ public:
         double dQuat[numPara][4];
         double dTrans[numPara][3];
 
+        if(numPara <=0 ){
+            ROS_WARN("optimizeLocalGraph: numPara <=0, check your data.");
+            return;
+        }
+
         for(int i = keyframe_id_in_frame[pose_cloud_frame->points.size() - slide_window_width - 1] + 1;
             i < keyframe_id_in_frame[pose_cloud_frame->points.size() - slide_window_width]; i++) {
             dTrans[i-keyframe_id_in_frame[pose_cloud_frame->points.size() - slide_window_width - 1]-1][0] = pose_each_frame->points[i].x;
