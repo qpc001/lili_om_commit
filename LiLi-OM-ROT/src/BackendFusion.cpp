@@ -570,6 +570,7 @@ public:
 
         imu_buf.push_back(ImuIn);
 
+        // 只保留最近600帧IMU，如果数据运行过快或滑动窗口太长，可以增大这个缓冲区
         if(imu_buf.size() > 600)
             imu_buf[imu_buf.size() - 601] = nullptr;
 
