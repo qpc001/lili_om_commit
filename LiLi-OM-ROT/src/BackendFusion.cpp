@@ -1606,7 +1606,14 @@ public:
                 // 计算权重
                 if (planeValid) {
                     float pd = norm.x() * pt_in_map.x + norm.y() * pt_in_map.y + norm.z() *pt_in_map.z + normInverse;
-                    float weight = 1 - 0.9 * fabs(pd) / sqrt(sqrt(pt_in_map.x * pt_in_map.x + pt_in_map.y * pt_in_map.y + pt_in_map.z * pt_in_map.z));
+                    //float weight = 1 - 0.9 * fabs(pd) / sqrt(sqrt(pt_in_map.x * pt_in_map.x + pt_in_map.y * pt_in_map.y + pt_in_map.z * pt_in_map.z));
+                    //---------------------------
+                    //@brief: fix Bug
+                    //@note: according to lio-sam
+                    //@author: qpc001
+                    //---------------------------
+                    float weight = 1 - 0.9 * fabs(pd) / sqrt(sqrt(pt_in_local.x * pt_in_local.x + pt_in_local.y * pt_in_local.y + pt_in_local.z * pt_in_local.z));
+                    //------------END------------
 
                     if(weight > 0.3) {
                         PointType normal;
