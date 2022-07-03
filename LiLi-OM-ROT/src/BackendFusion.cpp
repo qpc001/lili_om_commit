@@ -2476,13 +2476,16 @@ public:
             surf_lasts_ds[surf_lasts_ds.size() - slide_window_width - 6]->clear();
         }
 
+        // TODO：应该要使用delete来释放
         if(pre_integrations.size() > slide_window_width + 5) {
-            pre_integrations[pre_integrations.size() - slide_window_width - 6] = nullptr;
+            //pre_integrations[pre_integrations.size() - slide_window_width - 6] = nullptr;
+            delete pre_integrations[pre_integrations.size() - slide_window_width - 6];
         }
 
-        if(last_marginalization_parameter_blocks.size() > slide_window_width + 5) {
-            last_marginalization_parameter_blocks[last_marginalization_parameter_blocks.size() - slide_window_width - 6] = nullptr;
-        }
+//        TODO: [BUG]这可不能这么删除，这个与surf_lasts_ds[] pre_integrations[] 不一样
+//        if(last_marginalization_parameter_blocks.size() > slide_window_width + 5) {
+//            last_marginalization_parameter_blocks[last_marginalization_parameter_blocks.size() - slide_window_width - 6] = nullptr;
+//        }
     }
 
     void loopClosureThread() {
